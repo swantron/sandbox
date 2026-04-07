@@ -1,0 +1,11 @@
+The Scenario:
+You have a list of builds with start and end times. You want to know the minimum number of build agents (servers) you need to run all these builds without any build having to wait in a queue.
+
+Example:
+builds = [[1, 5], [2, 6], [8, 10]]
+
+    At time 2, both the first and second builds are running. You need 2 agents.
+
+    By time 8, the first two are done, so you only need 1 agent for the last build.
+
+    Answer: 2.

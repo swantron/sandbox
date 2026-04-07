@@ -30,3 +30,6 @@ class Solution:
 
         return merged
 
+sol = Solution()
+print(f"Test 1 (Overlapping): {sol.merge([[1, 3], [2, 6]])}") # Should print [[1, 6]]
+print(f"Test 2 (No overlap): {sol.merge([[1, 2], [4, 5]])}") # Should print [[1, 2], [4, 5]]
