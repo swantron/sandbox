@@ -1,31 +1,60 @@
-from typing import List
+def count_runners(intervals):
+    # --- STEP 0: THE EXIT ---
+    # If the list is empty, we don't need any machines.
+    if not intervals:
+        return 0
 
-class Solution:
-    def runners(self, intervals: List[List[int]]) -> int:
-        if not intervals:
-            return 0  # Return 0, not []
+    # --- STEP 1: TRANSFORMING DATA ---
+    # State of 'intervals' at start: [[1, 5], [2, 4]]
+    # We want to break these 'solid blocks' into 'individual events'.
+    events = []
+    
+    for start, end in intervals:
+        # Every interval creates TWO entries in our log.
+        # Format: (Time, Change)
+        events.append((start, 1))   # Someone arrived (+1)
+        events.append((end, -1))    # Someone left (-1)
         
-        starts = sorted([i[0] for i in intervals])
-        ends = sorted([i[1] for i in intervals])
+    # State of 'events' now: [(1, 1), (5, -1), (2, 1), (4, -1)]
+    # (Notice they are currently out of order)
+
+    # --- STEP 2: SORTING THE TIMELINE ---
+    # We sort so we can walk through time from start to finish.
+    events.sort()
+    
+    # State of 'events' now: [(1, 1), (2, 1), (4, -1), (5, -1)]
+    # (Now they are in chronological order)
+
+    # --- STEP 3: THE SWEEP ---
+    # We walk through the events and keep track of the "Water Level".
+    peak = 0     # The highest 'current' ever reached
+    current = 0  # How many builds are running at THIS exact moment
+    
+    for time, change in events:
+        # Update the 'current' count based on the event (+1 or -1)
+        current += change
         
-        current_runners = 0
-        max_runners = 0
-        pointer_start = 0
-        pointer_end = 0
+        # If 'current' just hit a new record, save it to 'peak'
+        if current > peak:
+            peak = current
+            
+        # --- MENTAL TRACE (Example [[1, 5], [2, 4]]) ---
+        # 1. Time 1: change is +1 -> current=1, peak=1
+        # 2. Time 2: change is +1 -> current=2, peak=2
+        # 3. Time 4: change is -1 -> current=1, peak=2
+        # 4. Time 5: change is -1 -> current=0, peak=2
+            
+    return peak
 
-        while pointer_start < len(starts):
-            if starts[pointer_start] < ends[pointer_end]:
-                current_runners += 1
-                max_runners = max(max_runners, current_runners) # Peak check!
-                pointer_start += 1
-            else:
-                current_runners -= 1
-                pointer_end += 1
+# --- RUNNING THE TEST ---
+test_data = [[1, 5], [2, 4]]
+result = count_runners(test_data)
+print(f"Max runners needed: {result}")
 
-        return max_runners
+test_data = [[1, 5], [2, 4], [1, 10]]
+result = count_runners(test_data)
+print(f"Max runners needed: {result}")
 
-sol = Solution()
-print(f"Test 1 (Overlapping): {sol.runners([[1, 3], [2, 6]])}") # Should print 2
-print(f"Test 2 (No overlap): {sol.runners([[1, 2], [4, 5]])}") # Should print 1
-print(f"Test 3 (Empty): {sol.runners([])}") # Should print 0
-print(f"Test 4 (Single): {sol.runners([[1, 2]])}") # Should print 1
+test_data = []
+result = count_runners(test_data)
+print(f"Max runners needed: {result}")
