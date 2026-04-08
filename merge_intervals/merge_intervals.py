@@ -1,60 +1,37 @@
 def merge_intervals(intervals):
-    # --- STATE: input intervals = [[1, 4], [4, 5]] ---
     if not intervals:
         return []
 
-    # 1. THE EVENT LOG
+    # 1. THE EVENT LOG (0=Start, 1=End)
     events = []
-    for start, end in intervals:
-        events.append((start, 0)) # 0 = START
-        events.append((end, 1))   # 1 = END
+    for s, e in intervals:
+        events.append((s, 0))
+        events.append((e, 1))
     
-    # --- STATE: events (unsorted) = [(1, 0), (4, 1), (4, 0), (5, 1)] ---
-
-    # 2. THE SORT
-    # Because (4, 0) is "smaller" than (4, 1), the START happens first.
     events.sort()
 
-    # --- STATE: events (sorted) = [(1, 0), (4, 0), (4, 1), (5, 1)] ---
-
-    # 3. THE MERGE SWEEP
+    # 2. THE STATE TRACKER
     merged = []
     current_active = 0
     start_time = None 
 
     for time, event_type in events:
-        # --- STATE TRACE ---
-        
-        # EVENT 1: (1, 0)
-        # current_active is 0, event_type is 0 (START)
+        # MOMENT A: The room was empty, someone just walked in.
+        # Record the time!
         if current_active == 0 and event_type == 0:
-            start_time = 1  # Bookmark the start!
+            start_time = time
         
-        # Update count: 0 -> 1
+        # UPDATE: Change the count
         if event_type == 0:
             current_active += 1
         else:
             current_active -= 1
         
-        # current_active is 1. We don't close the interval yet.
-
-        # EVENT 2: (4, 0) (The second interval starts)
-        # Update count: 1 -> 2
-        # current_active is now 2. start_time is still 1.
-
-        # EVENT 3: (4, 1) (The first interval ends)
-        # Update count: 2 -> 1
-        # current_active is now 1. It didn't hit 0, so the flashlight stays ON.
-
-        # EVENT 4: (5, 1) (The final interval ends)
-        # Update count: 1 -> 0
-        if event_type == 1: # We don't actually need this 'if', it's just for the trace
-             pass 
-
-        # If the 'Flashlight' just turned off (current_active is 0)
+        # MOMENT B: The last person just walked out.
+        # Room is now empty (0). Save the period!
         if current_active == 0:
-            # Finalize the block!
-            merged.append([start_time, time]) # merged = [[1, 5]]
+            merged.append([start_time, time])
+            start_time = None # Reset the "sticky note"
             
     return merged
 # --- TEST CHECKS ---
