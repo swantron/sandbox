@@ -1,0 +1,19 @@
+The Prompt:
+
+    "At Figma, we have a large monorepo with hundreds of interconnected packages. When a developer makes a change, we need to run a set of build tasks (Compiling, Linting, Testing).
+
+    You are given a list of tasks and a list of dependencies where (task, prerequisite) means the prerequisite must be completed before the task can start.
+
+    Write a function that returns a valid execution order for these tasks. If there is a circular dependency (e.g., A needs B, and B needs A), return an error or an empty list, as the build would be stuck forever."
+
+Example Input:
+
+    Tasks: ["linter", "compiler", "test_suite", "bundler"]
+
+    Dependencies: * ("compiler", "linter")  (Must lint before compiling)
+
+        ("test_suite", "compiler") (Must compile before testing)
+
+        ("bundler", "compiler") (Must compile before bundling)
+
+Expected Output: ["linter", "compiler", "test_suite", "bundler"] (Note: bundler and test_suite could be swapped at the end).

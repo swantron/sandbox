@@ -1,0 +1,11 @@
+The Scenario:
+You are building a tool to check if a local package is out of date. You are given two version strings, v1 and v2.
+
+    If v1 > v2, return 1.
+
+    If v1 < v2, return -1.
+
+    If they are equal, return 0.
+
+The Catch:
+Standard string comparison fails. "1.10" is mathematically larger than "1.2", but computers usually think "1.2" is bigger because 2 comes after 1.
