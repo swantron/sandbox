@@ -1,48 +1,41 @@
-def compare_versions(version_a: str, version_b: str) -> int:
-    # --- STEP 1: DECONSTRUCTION ---
-    # Convert "1.10.2" into ["1", "10", "2"]
+def compare_versions_with_beta(version_a: str, version_b: str) -> int:
+    # 1. DECONSTRUCTION
     segments_a = version_a.split(".")
     segments_b = version_b.split(".")
     
-    # --- STEP 2: DETERMINING SCOPE ---
-    # We need to loop for whichever version has more "segments"
-    # Example: "1.2" (2 segments) vs "1.2.1" (3 segments)
-    total_segments_to_check = max(len(segments_a), len(segments_b))
+    total_segments = max(len(segments_a), len(segments_b))
     
-    # --- STEP 3: THE SEGMENT-BY-SEGMENT COMPARISON ---
-    for i in range(total_segments_to_check):
-        
-        # A. Get the numeric value for Version A at this position
-        if i < len(segments_a):
-            # Convert string "10" to integer 10
-            value_a = int(segments_a[i])
-        else:
-            # If Version A is shorter, treat the missing slot as 0
-            value_a = 0
-            
-        # B. Get the numeric value for Version B at this position
-        if i < len(segments_b):
-            value_b = int(segments_b[i])
-        else:
-            value_b = 0
-            
-        # --- STEP 4: THE TIE-BREAKER LOGIC ---
-        # As soon as one value is bigger, we have a winner.
-        if value_a > value_b:
-            return 1   # version_a is newer/greater
-        
-        if value_b > value_a:
-            return -1  # version_b is newer/greater
-            
-        # If they are equal (e.g., both are "1"), the loop continues 
-        # to the next segment (e.g., the "Minor" or "Patch" version).
+    for i in range(total_segments):
+        # A. Get the raw string segments (or "0" if missing)
+        raw_a = segments_a[i] if i < len(segments_a) else "0"
+        raw_b = segments_b[i] if i < len(segments_b) else "0"
 
-    # --- STEP 5: FINAL RESULT ---
-    # If the loop finishes and we never returned 1 or -1, 
-    # it means every segment was identical.
+        # B. THE BETA CHECK: Look for hyphens
+        # "0-beta" vs "0"
+        has_beta_a = "-" in raw_a
+        has_beta_b = "-" in raw_b
+
+        # C. Extract the purely numeric part for comparison
+        # "1-beta".split("-")[0] gives us "1"
+        num_a = int(raw_a.split("-")[0])
+        num_b = int(raw_b.split("-")[0])
+
+        # D. Compare the numbers first
+        if num_a > num_b: return 1
+        if num_b > num_a: return -1
+
+        # E. TIE-BREAKER: Numbers are equal, but does one have a beta tag?
+        # Rule: A version WITH a hyphen is OLDER than the same version WITHOUT.
+        if has_beta_a and not has_beta_b:
+            return -1 # a is a beta, b is final -> b wins
+        if not has_beta_a and has_beta_b:
+            return 1  # a is final, b is beta -> a wins
+            
     return 0
 
 # --- READABLE TEST SUITE ---
-print(f"Is 1.10 newer than 1.2? Result: {compare_versions('1.10', '1.2')}")   # Expected: 1
-print(f"Is 1.2.0 newer than 1.2? Result: {compare_versions('1.2.0', '1.2')}") # Expected: 0
-print(f"Is 2.0.1 older than 2.1? Result: {compare_versions('2.0.1', '2.1')}") # Expected: -1
+print(f"1.2.0-beta vs 1.2.0: {compare_versions_with_beta('1.2.0-beta', '1.2.0')}") 
+# Expected: -1 (Beta is older)
+
+print(f"1.2.0-beta vs 1.1.9: {compare_versions_with_beta('1.2.0-beta', '1.1.9')}")
+# Expected: 1 (Even a beta of 1.2 is newer than 1.1)
