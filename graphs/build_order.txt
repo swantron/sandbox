@@ -1,19 +1,32 @@
-The Prompt:
+## Build Order
 
-    "At Figma, we have a large monorepo with hundreds of interconnected packages. When a developer makes a change, we need to run a set of build tasks (Compiling, Linting, Testing).
+You are working on a large monorepo with many interconnected packages. When a developer makes a change, a set of build tasks must run — for example: compiling, linting, and testing.
 
-    You are given a list of tasks and a list of dependencies where (task, prerequisite) means the prerequisite must be completed before the task can start.
+Given a list of tasks and a list of dependencies where each pair `(task, prerequisite)` means the prerequisite must complete before the task can start, write a function that returns a valid execution order for all tasks.
 
-    Write a function that returns a valid execution order for these tasks. If there is a circular dependency (e.g., A needs B, and B needs A), return an error or an empty list, as the build would be stuck forever."
+If a circular dependency exists (e.g. A requires B and B requires A), return an empty list — the build would be stuck forever.
 
-Example Input:
+---
 
-    Tasks: ["linter", "compiler", "test_suite", "bundler"]
+### Example
 
-    Dependencies: * ("compiler", "linter")  (Must lint before compiling)
+```
+Tasks: ["linter", "compiler", "test_suite", "bundler"]
 
-        ("test_suite", "compiler") (Must compile before testing)
+Dependencies:
+  ("compiler",  "linter")    # must lint before compiling
+  ("test_suite","compiler")  # must compile before testing
+  ("bundler",   "compiler")  # must compile before bundling
 
-        ("bundler", "compiler") (Must compile before bundling)
+Output: ["linter", "compiler", "test_suite", "bundler"]
+Note: "test_suite" and "bundler" are interchangeable at the end.
+```
 
-Expected Output: ["linter", "compiler", "test_suite", "bundler"] (Note: bundler and test_suite could be swapped at the end).
+---
+
+### Constraints
+
+- Task names are unique strings
+- Dependencies are given as a list of `(task, prerequisite)` pairs
+- Return any valid topological ordering
+- Return `[]` if a cycle is detected

@@ -1,11 +1,29 @@
-The Scenario:
-You are building a tool to check if a local package is out of date. You are given two version strings, v1 and v2.
+## Version Compare
 
-    If v1 > v2, return 1.
+You are building a tool to check whether a local package is out of date.
 
-    If v1 < v2, return -1.
+Given two version strings `v1` and `v2`, compare them and return:
+- `1`  if `v1` is greater than `v2`
+- `-1` if `v1` is less than `v2`
+- `0`  if they are equal
 
-    If they are equal, return 0.
+**Important:** Standard string comparison does not work here. For example, `"1.10"` is mathematically greater than `"1.2"`, but lexicographic ordering would incorrectly rank `"1.2"` higher.
 
-The Catch:
-Standard string comparison fails. "1.10" is mathematically larger than "1.2", but computers usually think "1.2" is bigger because 2 comes after 1.
+---
+
+### Examples
+
+```
+compareVersions("1.10", "1.2")  => 1
+compareVersions("1.2", "1.10") => -1
+compareVersions("1.0", "1.0")  => 0
+compareVersions("2.0", "1.9")  => 1
+```
+
+---
+
+### Constraints
+
+- Version strings contain only digits and dots
+- Each version segment is a non-negative integer
+- Versions may have differing numbers of segments (e.g. `"1.0"` vs `"1.0.0"`)

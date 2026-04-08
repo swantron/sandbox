@@ -1,11 +1,31 @@
-The Scenario:
-You have a list of builds with start and end times. You want to know the minimum number of build agents (servers) you need to run all these builds without any build having to wait in a queue.
+## Max Concurrent Jobs
 
-Example:
-builds = [[1, 5], [2, 6], [8, 10]]
+You have a list of build jobs, each with a start time and an end time. You need to determine the minimum number of build agents (servers) required to run all jobs simultaneously — no job should ever have to wait in a queue.
 
-    At time 2, both the first and second builds are running. You need 2 agents.
+---
 
-    By time 8, the first two are done, so you only need 1 agent for the last build.
+### Examples
 
-    Answer: 2.
+```
+Input:  [[1,5],[2,6],[8,10]]
+Output: 2
+
+Explanation:
+  At time 2, jobs 1 and 2 are both running -> 2 agents needed.
+  By time 8, both are done, so job 3 only needs 1 agent.
+  Peak concurrency is 2.
+
+Input:  [[1,4],[2,3],[3,5]]
+Output: 3
+
+Input:  [[1,2],[3,4],[5,6]]
+Output: 1
+```
+
+---
+
+### Constraints
+
+- `1 <= jobs.length <= 10^4`
+- `jobs[i].length == 2`
+- `0 <= start < end <= 10^4`
