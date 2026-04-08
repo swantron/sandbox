@@ -1,0 +1,36 @@
+## System Design: Distributed Build Cache
+
+Your engineering org has grown to 300 engineers working in a monorepo. Build times have ballooned — a full rebuild takes 45 minutes. Most of that time is spent recompiling packages that haven't changed.
+
+Design a distributed build cache that allows any engineer's machine (or CI agent) to reuse build artifacts produced by any other machine, without rebuilding work that's already been done.
+
+---
+
+### Requirements to clarify / consider
+
+- What is a cache key? How do you determine whether a cached artifact is safe to reuse?
+- Where are artifacts stored, and how are they retrieved?
+- What happens on a cache miss?
+- How do you handle cache invalidation — when should an artifact be evicted?
+- How do you keep the cache from growing unbounded?
+- What are the consistency guarantees? Is a stale hit ever acceptable?
+
+---
+
+### Scale
+
+- ~300 engineers, each running multiple builds per day
+- CI runs ~500 builds/day across a fleet of agents
+- Monorepo has ~2,000 packages with deep dependency trees
+- Artifacts range from a few KB (linting reports) to several hundred MB (compiled binaries)
+
+---
+
+### Follow-ups an interviewer will likely ask
+
+1. How do you compute a cache key for a package that has transitive dependencies?
+2. A package's source hasn't changed, but an environment variable it reads at build time has. Does your cache handle this?
+3. How would you design the eviction policy? LRU? TTL? Size-based?
+4. What happens if two CI agents produce the artifact concurrently — do you get a conflict?
+5. How do you make cache reads fast enough that they don't add more latency than they save?
+6. How would you add observability — cache hit rate, p99 retrieval latency, storage costs?

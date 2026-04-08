@@ -1,0 +1,86 @@
+## Build Cache — Key Points & Drill Notes
+
+---
+
+### The one thing to land first
+
+**The cache key must be a hermetic, deterministic fingerprint of all inputs.**
+Source files + dependency keys + toolchain version + relevant env vars — hashed together recursively.
+If you get this wrong, you get incorrect builds. That's worse than cache misses.
+
+---
+
+### Core design in one breath
+
+Content-addressed, two-tier cache. Key = hash of all inputs (recursive). Local disk first, remote object store second. Artifacts are immutable — no invalidation, just eviction. Uploads are async so they don't block the build.
+
+---
+
+### Two-tier storage
+
+| Layer | What | Why |
+|---|---|---|
+| Local disk | Per-machine LRU cache | Sub-millisecond hits, no network |
+| Remote (S3/GCS) | Shared object store, flat key-value | Cross-machine and CI reuse |
+
+---
+
+### Cache miss path (say this out loud)
+
+1. Compute key
+2. Check local → miss
+3. Check remote → miss
+4. Build locally
+5. Write to local cache
+6. Upload to remote **async** (non-blocking)
+
+### Cache hit path
+
+1. Compute key
+2. Local hit → done
+3. Remote hit → download, unpack, populate local → done
+
+---
+
+### Eviction (don't overcomplicate it)
+
+- Local: LRU with a size cap (e.g. 10GB)
+- Remote: TTL (e.g. 30 days since last access) + bucket-level size lifecycle policy
+- No explicit invalidation — a changed input produces a different key, old entries just age out
+
+---
+
+### Concurrency — the "two agents build simultaneously" question
+
+Safe. Builds must be **hermetic** (no timestamps baked in, no randomness in output). Both agents produce identical artifacts. Last writer wins on the key. Not a conflict.
+If builds aren't hermetic, the cache is broken by design — fix hermeticity first.
+
+---
+
+### Follow-up answers
+
+**Transitive dependencies in the key?**
+Recursive hashing. A package's key includes its dependencies' keys. Any change anywhere in the tree propagates upward automatically.
+
+**Env var changes busting the cache?**
+Include relevant env vars in the key. The hard part is knowing which vars are "relevant" — you have to declare them explicitly in the build config. Undeclared env vars are a hermeticity hole.
+
+**Eviction policy?**
+LRU locally, TTL remotely. Don't over-engineer. Size budget > time budget for most build artifacts.
+
+**Two agents produce same artifact concurrently?**
+No conflict if builds are hermetic (same inputs → same outputs). Last write wins, content is identical.
+
+**Cache reads adding more latency than they save?**
+Local cache hits are effectively free. Remote hits need to beat the build time — for compiled binaries this is almost always true. For trivial packages, you might skip remote caching below a size/time threshold.
+
+**Observability?**
+Emit per-build: hit/miss by layer, download/upload latency, artifact size. Dashboard: hit rate over time, p99 latency, storage cost. Alert on sudden hit rate drops (usually a toolchain version change invalidated all keys).
+
+---
+
+### Product intuition angle
+
+Frame everything around **developer trust and velocity**.
+A stale cache hit that produces a wrong binary is a P0 incident. A cache miss is just a slow build.
+When presenting tradeoffs, always anchor on: *what does this mean for the engineer using it?*
