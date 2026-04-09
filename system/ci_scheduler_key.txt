@@ -1,0 +1,97 @@
+## CI Job Scheduler — Key Points & Drill Notes
+
+---
+
+### The one thing to land first
+
+**This is a topological sort problem promoted to a distributed system.**
+The dependency graph determines order. The agent fleet determines parallelism. The scheduler's job is to continuously find the frontier of "ready" jobs — jobs whose dependencies have all completed — and dispatch them to idle agents.
+
+---
+
+### Core design in one breath
+
+Model jobs as a DAG. Maintain a ready queue of jobs with no unmet dependencies. Workers pull from the queue. When a job completes, decrement the dependency count of its downstream jobs — any that hit zero join the ready queue. Track state in a persistent store so a scheduler crash doesn't lose in-flight work.
+
+---
+
+### Job states (say these explicitly)
+
+```
+PENDING   → waiting on dependencies
+READY     → all dependencies met, waiting for an agent
+RUNNING   → assigned to an agent
+SUCCEEDED → done, triggers downstream
+FAILED    → done, cancels downstream (or not, depending on config)
+CANCELLED → skipped due to upstream failure
+```
+
+---
+
+### The ready queue
+
+The central data structure. A job enters READY when its in-degree (unmet dependency count) hits zero.
+
+On job completion:
+1. Mark job SUCCEEDED
+2. For each downstream job, decrement its pending dependency count
+3. Any downstream job at zero → enqueue to READY
+
+This is Kahn's algorithm running continuously as jobs finish.
+
+---
+
+### Assigning jobs to agents
+
+Agents poll the ready queue (or the scheduler pushes via a work queue like SQS/Redis). Simple first-in-first-out works as a baseline. Priority improvements:
+
+- **Critical path first**: run jobs that are on the longest remaining path first — they gate the most downstream work
+- **Shortest job first**: maximize throughput when agents are scarce
+- **Pipeline fairness**: cap how many agents any single pipeline can hold (prevents starvation)
+
+---
+
+### Follow-up answers
+
+**Which ready job runs next when agents are scarce?**
+Critical path scheduling: estimate the longest remaining path from each ready job to the end of its pipeline (using historical job durations). Prioritize jobs with the longest downstream chains — they're blocking the most work.
+
+**Job running 3x its average duration?**
+Emit a slowness alert. Optionally: kill and retry on a different agent (handles silent agent failure). Don't kill immediately — some jobs are legitimately slow. Use a configurable timeout multiplier, not a hard deadline.
+
+**One pipeline monopolizing all agents?**
+Agent capping per pipeline. Each pipeline gets a max concurrency budget (e.g. 20 of 50 agents). Ready jobs beyond the cap stay in READY but aren't dispatched until the pipeline's running count drops. Prevents one slow monster pipeline from starving everyone else.
+
+**Agent dies mid-job?**
+Agents send heartbeats (e.g. every 10s). Scheduler marks a job FAILED if no heartbeat for N intervals. Re-enqueue as READY for retry. Agents must be stateless — any agent can pick up any job. Artifacts go to shared storage, not local disk.
+
+**Scheduler itself crashes?**
+All state lives in the persistent store (Postgres), not in memory. On restart, the scheduler rehydrates: query for RUNNING jobs with no recent heartbeat (agent likely dead) → re-enqueue them. READY jobs are already in the queue. Recovery is a replay of current state, not a rebuild from scratch.
+
+**Developer visibility into a stuck pipeline?**
+Per-job status page showing: current state, assigned agent, duration, what it's waiting on. The most useful view: *"your pipeline is blocked on job X, which has been RUNNING for 14 minutes on agent-22."* That's the signal that something is actually wrong vs. just slow.
+
+---
+
+### Failure propagation (nuanced — expect this)
+
+Default: a failed job cancels all downstream jobs in its subtree.
+But not always — some jobs are optional (non-blocking linting, code coverage). Model jobs with a `required` flag. Only required job failures propagate cancellation. Optional failures emit a warning but don't block downstream.
+
+---
+
+### The full-circle moment (worth saying out loud)
+
+The two coding problems in the interview connect directly here:
+- **Build order** (topo sort) = how the scheduler determines job ordering
+- **Max concurrent jobs** = how you reason about agent fleet utilization
+
+The system design is just those two algorithms with persistence, failure handling, and observability wrapped around them.
+
+---
+
+### Product intuition angle
+
+Developers care about two things: **how long is this taking**, and **is something wrong**.
+Every design decision should be evaluated against: does this help engineers get feedback faster, and does it make failures obvious rather than silent?
+A scheduler that's efficient but opaque will erode trust. One that's slightly slower but always tells you exactly what's happening will be adopted.
