@@ -1,0 +1,35 @@
+## System Design: Flaky Test Detection & Management
+
+Your CI system is losing developer trust. Tests fail on PRs that look correct, engineers re-run CI and the tests pass, and the PR merges. Nobody knows if a red build is a real failure or just noise. Some tests fail 30% of the time for no apparent reason.
+
+Design a system that detects flaky tests, quarantines them so they stop blocking engineers, and gives the team the tools to prioritize fixing them.
+
+---
+
+### Requirements to clarify / consider
+
+- How do you define "flaky"? What signal tells you a test is flaky vs. legitimately failing?
+- How do you collect that signal at scale without storing every test result forever?
+- When is it safe to quarantine a test — and what does quarantine actually mean in practice?
+- Who is responsible for fixing a flaky test, and how do you make sure quarantined tests don't stay quarantined forever?
+- What's the risk of getting this wrong in either direction (too aggressive vs. too conservative)?
+
+---
+
+### Scale
+
+- 500 CI pipelines/day, each running thousands of tests
+- Test suite has ~50,000 tests across all packages
+- Some tests are slow (10min integration tests), some are fast (unit tests under 1s)
+- Teams own different parts of the test suite with no central ownership
+
+---
+
+### Follow-ups an interviewer will likely ask
+
+1. A test fails on a PR. How does your system decide in real time whether it's flaky or a real failure?
+2. What's your quarantine policy — what exactly happens to a quarantined test in CI?
+3. A quarantined test has been ignored for 3 months. What prevents it from staying that way forever?
+4. How do you distinguish a flaky test from a test that's failing because of a real intermittent infrastructure problem (e.g., a flaky database in the test environment)?
+5. How would you prioritize which flaky tests to fix first?
+6. A developer intentionally writes a non-deterministic test. How does your system handle it differently from a test that became flaky due to a bug?
