@@ -6,13 +6,17 @@
 
 **Correctness beats efficiency. Always bias toward false positives.**
 A missed rebuild ships a broken build. An extra rebuild wastes compute.
-The system earns trust by never being wrong, and earns adoption by being transparent.
+The system earns trust by never being wrong, and earns adoption by
+being transparent.
 
 ---
 
 ### Core design in one breath
 
-Maintain a dependency graph and its reverse. Map changed files to packages. BFS the reverse graph from those packages to find everything upstream that's affected. Rebuild that set. Keep the graph fresh by re-parsing manifests when they change.
+Maintain a dependency graph and its reverse. Map changed files to
+packages. BFS the reverse graph from those packages to find everything
+upstream that's affected. Rebuild that set. Keep the graph fresh by
+re-parsing manifests when they change.
 
 ---
 
@@ -23,7 +27,8 @@ Maintain a dependency graph and its reverse. Map changed files to packages. BFS 
 | Dependency graph | A depends on B | Understanding build order |
 | Reverse graph | Who depends on A | Answering "what does this change affect?" |
 
-Store both as adjacency lists. The reverse graph is the one you actually query at CI time.
+Store both as adjacency lists. The reverse graph is the one you
+actually query at CI time.
 
 ---
 
@@ -39,43 +44,67 @@ Store both as adjacency lists. The reverse graph is the one you actually query a
 
 ### Keeping the graph fresh
 
-Don't re-parse the entire repo on every PR. Only re-parse packages whose **manifest file** appears in the diff (`package.json`, `BUILD`, `pyproject.toml`, etc.).
-This requires manifests to be the single source of truth for dependencies — undeclared dependencies are a correctness hole.
+Don't re-parse the entire repo on every PR. Only re-parse packages
+whose **manifest file** appears in the diff (`package.json`, `BUILD`,
+`pyproject.toml`, etc.). This requires manifests to be the single
+source of truth for dependencies — undeclared dependencies are a
+correctness hole.
 
 ---
 
 ### Follow-up answers
 
 **Core utility changes — half the repo is affected. Now what?**
-The graph tells you this. At some fan-out threshold, accept a full build — it's cheaper than the illusion of incrementality for 1,000+ packages. Set a configurable ceiling (e.g. if affected set > 60% of packages, rebuild all).
+The graph tells you this. At some fan-out threshold, accept a full
+build — it's cheaper than the illusion of incrementality for 1,000+
+packages. Set a configurable ceiling (e.g. if affected set > 60% of
+packages, rebuild all).
 
 **Two PRs open simultaneously, both modify the dependency graph?**
-Treat the graph as versioned. Each PR computes affected packages against the graph state at its base commit, not HEAD. Merging both updates the graph. Stale graph state → worst case a false positive (extra rebuild), not a false negative.
+Treat the graph as versioned. Each PR computes affected packages
+against the graph state at its base commit, not HEAD. Merging both
+updates the graph. Stale graph state → worst case a false positive
+(extra rebuild), not a false negative.
 
 **Soft/undeclared dependencies (config files, env vars)?**
-You can't detect what you can't see. The system can only be as correct as the declared dependency model. Flag undeclared dependencies as a separate problem — linting the build config is a good companion tool.
+You can't detect what you can't see. The system can only be as correct
+as the declared dependency model. Flag undeclared dependencies as a
+separate problem — linting the build config is a good companion tool.
 
 **Flaky tests?**
-Orthogonal problem. Affected detection tells you *what* to run. Flakiness is about *how* to run it. Don't conflate them. Track flake rate separately and quarantine flaky tests — don't skip them from affected detection.
+Orthogonal problem. Affected detection tells you *what* to run.
+Flakiness is about *how* to run it. Don't conflate them. Track flake
+rate separately and quarantine flaky tests — don't skip them from
+affected detection.
 
 **How do developers see why a package was included?**
 `--why` output or a PR comment showing the chain:
-  `package/auth-client included because core-utils changed and auth-client depends on core-utils`
-This is critical — without it, developers won't trust the system and will demand full rebuilds.
+  `package/auth-client included because core-utils changed and
+  auth-client depends on core-utils`
+This is critical — without it, developers won't trust the system and
+will demand full rebuilds.
 
 **How do you validate correctness?**
-Shadow mode: run affected detection in parallel with full CI. Any failure caught by full CI but missed by the affected set = false negative → find the undeclared dependency. Do this before cutting over.
+Shadow mode: run affected detection in parallel with full CI. Any
+failure caught by full CI but missed by the affected set = false
+negative → find the undeclared dependency. Do this before cutting over.
 
 ---
 
 ### The high-fan-out problem (expect this)
 
-Some packages are depended on by everything (logger, core-utils, config). A change there = full rebuild. That's fine — the system should tell you that clearly rather than pretending it can be incremental. Knowing *why* you're doing a full build is still valuable.
+Some packages are depended on by everything (logger, core-utils,
+config). A change there = full rebuild. That's fine — the system
+should tell you that clearly rather than pretending it can be
+incremental. Knowing *why* you're doing a full build is still valuable.
 
 ---
 
 ### Product intuition angle
 
-Your users are engineers. The product value is: **faster feedback loops and less time blocked on CI.**
-Every design decision should be evaluated against: does this make engineers faster? Does it make the system more trustworthy?
-An incremental system that's occasionally wrong will be abandoned. A conservative one that's always right will be adopted even if it's not perfectly optimal.
+Your users are engineers. The product value is: **faster feedback
+loops and less time blocked on CI.** Every design decision should be
+evaluated against: does this make engineers faster? Does it make the
+system more trustworthy? An incremental system that's occasionally
+wrong will be abandoned. A conservative one that's always right will
+be adopted even if it's not perfectly optimal.

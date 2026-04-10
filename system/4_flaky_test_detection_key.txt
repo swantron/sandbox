@@ -4,27 +4,35 @@
 
 ### The one thing to land first
 
-**A flaky test is one that produces different results on the same code.**
-The signal is: same commit, same inputs, different outcomes across runs. Everything else — quarantine, alerting, prioritization — is downstream of detecting that signal reliably.
+**A flaky test is one that produces different results on the same
+code.** The signal is: same commit, same inputs, different outcomes
+across runs. Everything else — quarantine, alerting, prioritization —
+is downstream of detecting that signal reliably.
 
 ---
 
 ### Core design in one breath
 
-Record every test result against its commit SHA. For each test, maintain a rolling window of pass/fail outcomes on the same SHA. A test that flips within that window is flaky. Tag it, route it to a quarantine lane in CI, notify the owning team, and enforce a TTL on how long it can stay quarantined before it becomes a blocking issue.
+Record every test result against its commit SHA. For each test,
+maintain a rolling window of pass/fail outcomes on the same SHA. A
+test that flips within that window is flaky. Tag it, route it to a
+quarantine lane in CI, notify the owning team, and enforce a TTL on
+how long it can stay quarantined before it becomes a blocking issue.
 
 ---
 
 ### Defining "flaky" precisely
 
-A test is flaky if it produces **both a pass and a fail on the same commit** within a recent window.
+A test is flaky if it produces **both a pass and a fail on the same
+commit** within a recent window.
 
 ```
 test_foo | commit abc123 | results: [pass, pass, fail, pass] → FLAKY
 test_foo | commit abc123 | results: [fail, fail, fail]       → NOT flaky, just broken
 ```
 
-This distinction matters. A consistently failing test is a real failure. A flipping test is a flaky one. Don't conflate them.
+This distinction matters. A consistently failing test is a real
+failure. A flipping test is a flaky one. Don't conflate them.
 
 ---
 
@@ -35,7 +43,9 @@ Every CI run emits a test result event:
 { test_id, commit_sha, pipeline_id, outcome: pass|fail, duration_ms, timestamp }
 ```
 
-Store in an append-only table. Index on `(test_id, commit_sha)`. You don't need results forever — a rolling 30-day window is enough. Partition and drop old data automatically.
+Store in an append-only table. Index on `(test_id, commit_sha)`. You
+don't need results forever — a rolling 30-day window is enough.
+Partition and drop old data automatically.
 
 Aggregate a flakiness score per test:
 ```
@@ -46,15 +56,18 @@ flake_rate = (runs with mixed outcomes on same SHA) / (total runs in window)
 
 ### Quarantine policy
 
-Quarantine = the test still runs, but **its failure does not block the pipeline**.
+Quarantine = the test still runs, but **its failure does not block
+the pipeline**.
 
 - Results are still recorded (you need the signal)
 - Failures emit a warning, not a hard failure
 - The PR can merge
 
-Do NOT skip quarantined tests entirely — you lose detection signal and the test rots further.
+Do NOT skip quarantined tests entirely — you lose detection signal
+and the test rots further.
 
-Quarantine threshold: configurable per team, but a reasonable default is flake_rate > 5% over the last 200 runs.
+Quarantine threshold: configurable per team, but a reasonable default
+is flake_rate > 5% over the last 200 runs.
 
 ---
 
@@ -63,9 +76,12 @@ Quarantine threshold: configurable per team, but a reasonable default is flake_r
 Quarantined tests must have a TTL. After N days (e.g. 30), escalate:
 - Day 1–7: notify test owner via comment/Slack
 - Day 7–30: flaky test appears on team dashboard as tech debt
-- Day 30+: test is **deleted from the suite** or re-promoted to blocking, team lead is notified
+- Day 30+: test is **deleted from the suite** or re-promoted to
+  blocking, team lead is notified
 
-Deletion sounds harsh but it's correct — a test that's been quarantined for 3 months is providing no value and is actively misleading. Either fix it or remove it.
+Deletion sounds harsh but it's correct — a test that's been
+quarantined for 3 months is providing no value and is actively
+misleading. Either fix it or remove it.
 
 ---
 
@@ -73,28 +89,43 @@ Deletion sounds harsh but it's correct — a test that's been quarantined for 3 
 
 **Real-time decision on a failing test — flaky or real?**
 In real time you can't always know. Options:
-1. **Auto-retry**: retry the failed test once on the same agent. If it passes, mark as likely flaky and log. If it fails twice, treat as real. This adds latency but catches obvious flakes immediately.
-2. **Historical lookup**: check the flakiness DB — if this test has a flake_rate > threshold, surface a warning alongside the failure so the engineer can make an informed call.
+1. **Auto-retry**: retry the failed test once on the same agent. If
+   it passes, mark as likely flaky and log. If it fails twice, treat
+   as real. This adds latency but catches obvious flakes immediately.
+2. **Historical lookup**: check the flakiness DB — if this test has
+   a flake_rate > threshold, surface a warning alongside the failure
+   so the engineer can make an informed call.
 Best answer: both. Retry + historical context.
 
 **Infrastructure flakiness vs. test flakiness?**
-Look for **correlated failures** — if 50 tests fail at the same time across unrelated pipelines, that's infrastructure, not individual test flakiness. Track failure timestamps and correlate across pipelines. A sudden spike in failures across unrelated tests = infra incident, not flaky tests. Alert the on-call, don't quarantine.
+Look for **correlated failures** — if 50 tests fail at the same time
+across unrelated pipelines, that's infrastructure, not individual test
+flakiness. Track failure timestamps and correlate across pipelines. A
+sudden spike in failures across unrelated tests = infra incident, not
+flaky tests. Alert the on-call, don't quarantine.
 
 **Prioritizing which flaky tests to fix?**
 Score by impact:
 ```
 priority = flake_rate × runs_per_day × team_size_affected
 ```
-A test that flips 10% of the time but runs 500x/day across 20 engineers costs far more than one that flips 50% but runs twice a week. Surface this as a ranked list on the team dashboard.
+A test that flips 10% of the time but runs 500x/day across 20
+engineers costs far more than one that flips 50% but runs twice a
+week. Surface this as a ranked list on the team dashboard.
 
 **Intentionally non-deterministic test?**
-If a developer writes a test that's inherently non-deterministic (e.g. timing-sensitive, random sampling), your system will flag it correctly as flaky. That's the right outcome — non-deterministic tests are bad tests. The system shouldn't have a special carve-out; the feedback should push developers toward deterministic testing practices.
+If a developer writes a test that's inherently non-deterministic
+(e.g. timing-sensitive, random sampling), your system will flag it
+correctly as flaky. That's the right outcome — non-deterministic tests
+are bad tests. The system shouldn't have a special carve-out; the
+feedback should push developers toward deterministic practices.
 
 **Auto-retry risks?**
 Retrying masks real failures if you're not careful. Rules:
 - Only retry once
 - Log every retry — make it visible, not silent
-- Don't retry if the test has zero flake history (likely a real failure)
+- Don't retry if the test has zero flake history (likely a real
+  failure)
 - Never retry on the main branch, only on PRs
 
 ---
@@ -107,13 +138,17 @@ This completes the pipeline:
 3. **CI scheduler** — run it efficiently
 4. **Flaky test detection** — trust the results
 
-A CI system that's fast but whose results engineers don't trust is worthless. Flaky test management is what makes the other three investments pay off.
+A CI system that's fast but whose results engineers don't trust is
+worthless. Flaky test management is what makes the other three
+investments pay off.
 
 ---
 
 ### Product intuition angle
 
-The user here is the engineer staring at a red build at 4pm deciding whether to re-run or investigate.
-Every minute they spend re-running a flaky test is a minute of lost focus.
-Every time they merge past a red build because "it's probably flaky" is a risk.
-The product goal is: **make the meaning of a red build unambiguous.** Red means broken. Always.
+The user here is the engineer staring at a red build at 4pm deciding
+whether to re-run or investigate. Every minute they spend re-running
+a flaky test is a minute of lost focus. Every time they merge past a
+red build because "it's probably flaky" is a risk. The product goal
+is: **make the meaning of a red build unambiguous.** Red means broken.
+Always.

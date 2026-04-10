@@ -1,8 +1,13 @@
 ## 3. System Design: CI Job Scheduler
 
-Your CI system receives hundreds of build jobs per day across a monorepo. Each job has dependencies — a test suite can't run until compilation finishes, compilation can't start until linting passes. You have a fleet of build agents to execute these jobs.
+Your CI system receives hundreds of build jobs per day across a
+monorepo. Each job has dependencies — a test suite can't run until
+compilation finishes, compilation can't start until linting passes.
+You have a fleet of build agents to execute these jobs.
 
-Design a CI job scheduler that executes jobs in dependency order, maximizes parallelism across your agent fleet, and handles failures gracefully.
+Design a CI job scheduler that executes jobs in dependency order,
+maximizes parallelism across your agent fleet, and handles failures
+gracefully.
 
 ---
 
@@ -10,9 +15,12 @@ Design a CI job scheduler that executes jobs in dependency order, maximizes para
 
 - How do you represent the jobs and their dependencies?
 - How do you determine which jobs are ready to run at any given moment?
-- How do you assign jobs to agents, and what happens when an agent goes down mid-job?
-- If a job fails, which downstream jobs should be cancelled vs. allowed to continue?
-- How do you prevent a single large pipeline from starving other pipelines waiting for agents?
+- How do you assign jobs to agents, and what happens when an agent
+  goes down mid-job?
+- If a job fails, which downstream jobs should be cancelled vs.
+  allowed to continue?
+- How do you prevent a single large pipeline from starving other
+  pipelines waiting for agents?
 - How do you handle jobs that are much slower than others (stragglers)?
 
 ---
@@ -28,9 +36,15 @@ Design a CI job scheduler that executes jobs in dependency order, maximizes para
 
 ### Follow-ups an interviewer will likely ask
 
-1. How does your scheduler decide which ready job to run next when there are more ready jobs than available agents?
-2. A job has been running for 3x its historical average. What do you do?
-3. How do you avoid one large pipeline monopolizing all 50 agents and starving smaller pipelines?
-4. An agent dies mid-job. How does the scheduler detect this and recover?
-5. How would you make the scheduler itself highly available — what happens if it crashes?
-6. How would you give developers visibility into where their pipeline is stuck?
+1. How does your scheduler decide which ready job to run next when
+   there are more ready jobs than available agents?
+2. A job has been running for 3x its historical average. What do
+   you do?
+3. How do you avoid one large pipeline monopolizing all 50 agents
+   and starving smaller pipelines?
+4. An agent dies mid-job. How does the scheduler detect this and
+   recover?
+5. How would you make the scheduler itself highly available — what
+   happens if it crashes?
+6. How would you give developers visibility into where their
+   pipeline is stuck?

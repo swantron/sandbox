@@ -1,8 +1,13 @@
 ## 1. System Design: Affected Package Detection
 
-Your monorepo has grown to 2,000+ packages. Every time a developer opens a pull request, CI runs the full test suite — which takes 45 minutes and costs the team hours of blocked time every day.
+Your monorepo has grown to 2,000+ packages. Every time a developer
+opens a pull request, CI runs the full test suite — which takes 45
+minutes and costs the team hours of blocked time every day.
 
-The problem: most PRs touch 1–3 packages, but CI rebuilds and retests everything. Design a system that, given a set of changed files in a pull request, determines the minimal set of packages that actually need to be rebuilt and retested.
+The problem: most PRs touch 1–3 packages, but CI rebuilds and retests
+everything. Design a system that, given a set of changed files in a
+pull request, determines the minimal set of packages that actually
+need to be rebuilt and retested.
 
 ---
 
@@ -10,9 +15,12 @@ The problem: most PRs touch 1–3 packages, but CI rebuilds and retests everythi
 
 - How do you model the dependency graph between packages?
 - Given a changed file, how do you determine which package owns it?
-- A package is "affected" if it changed, or if anything it depends on changed. How do you traverse this?
+- A package is "affected" if it changed, or if anything it depends on
+  changed. How do you traverse this?
 - How do you keep the dependency graph up to date as the repo evolves?
-- What does a false negative mean here (missing a package that should rebuild)? What does a false positive mean (rebuilding something unnecessarily)?
+- What does a false negative mean here (missing a package that should
+  rebuild)? What does a false positive mean (rebuilding something
+  unnecessarily)?
 - Where does this system fit in the CI pipeline?
 
 ---
@@ -28,9 +36,16 @@ The problem: most PRs touch 1–3 packages, but CI rebuilds and retests everythi
 
 ### Follow-ups an interviewer will likely ask
 
-1. A core utility package changes. Half the repo depends on it. How do you handle this — do you just rebuild everything, or is there a smarter cutoff?
-2. How does this system stay consistent when two PRs are open simultaneously and both modify the dependency graph?
-3. How would you model "soft" dependencies — e.g., a package that reads a config file that isn't declared as a formal dependency?
-4. What's your strategy for packages with non-deterministic tests (flaky tests)? Does affected-package detection interact with that?
-5. How would you expose this to developers — can they see why a package was included in their build?
-6. How do you validate that your detection is correct? What breaks if it gets it wrong?
+1. A core utility package changes. Half the repo depends on it. How
+   do you handle this — do you just rebuild everything, or is there
+   a smarter cutoff?
+2. How does this system stay consistent when two PRs are open
+   simultaneously and both modify the dependency graph?
+3. How would you model "soft" dependencies — e.g., a package that
+   reads a config file that isn't declared as a formal dependency?
+4. What's your strategy for packages with non-deterministic tests
+   (flaky tests)? Does affected-package detection interact with that?
+5. How would you expose this to developers — can they see why a
+   package was included in their build?
+6. How do you validate that your detection is correct? What breaks
+   if it gets it wrong?
