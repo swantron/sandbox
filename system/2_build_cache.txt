@@ -1,4 +1,4 @@
-## System Design: Distributed Build Cache
+## 2. System Design: Distributed Build Cache
 
 Your engineering org has grown to 300 engineers working in a monorepo. Build times have ballooned — a full rebuild takes 45 minutes. Most of that time is spent recompiling packages that haven't changed.
 

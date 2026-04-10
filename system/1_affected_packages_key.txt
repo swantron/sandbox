@@ -1,4 +1,4 @@
-## Affected Package Detection — Key Points & Drill Notes
+## 1. Affected Package Detection — Key Points & Drill Notes
 
 ---
 

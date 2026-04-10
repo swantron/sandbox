@@ -1,4 +1,4 @@
-## System Design: Flaky Test Detection & Management
+## 4. System Design: Flaky Test Detection & Management
 
 Your CI system is losing developer trust. Tests fail on PRs that look correct, engineers re-run CI and the tests pass, and the PR merges. Nobody knows if a red build is a real failure or just noise. Some tests fail 30% of the time for no apparent reason.
 

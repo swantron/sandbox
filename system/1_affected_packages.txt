@@ -1,4 +1,4 @@
-## System Design: Affected Package Detection
+## 1. System Design: Affected Package Detection
 
 Your monorepo has grown to 2,000+ packages. Every time a developer opens a pull request, CI runs the full test suite — which takes 45 minutes and costs the team hours of blocked time every day.
 

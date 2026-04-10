@@ -1,4 +1,4 @@
-## System Design: CI Job Scheduler
+## 3. System Design: CI Job Scheduler
 
 Your CI system receives hundreds of build jobs per day across a monorepo. Each job has dependencies — a test suite can't run until compilation finishes, compilation can't start until linting passes. You have a fleet of build agents to execute these jobs.
 
