@@ -1,9 +1,7 @@
 # max_conc.py — Drill Notes
 
 ## Opening line (say this first)
-"This is a sweep line approach. Instead of comparing intervals directly, I
-decompose each one into two timestamped events — an arrival and a departure —
-then walk through them in order and track the running count."
+"This is a sweep line approach. Instead of comparing intervals directly, I decompose each one into two timestamped events — an arrival and a departure — then walk through them in order and track the running count."
 
 ---
 
@@ -43,25 +41,16 @@ Answer: 2
 ---
 
 ## Subtle thing to know about the sort
-Events are tuples: `(time, +1 or -1)`. Python sorts tuples left to right.
-At a tie on time, `-1 < +1`, so **end events sort before start events**.
+Events are tuples: `(time, +1 or -1)`. Python sorts tuples left to right. At a tie on time, `-1 < +1`, so **end events sort before start events**.
 
-This means: if one interval ends at 4 and another starts at 4, the departure
-is processed first. They are **not** counted as concurrent.
+This means: if one interval ends at 4 and another starts at 4, the departure is processed first. They are **not** counted as concurrent. This is the half-open interval interpretation: [start, end).
 
-This is the half-open interval interpretation: [start, end).
-
-**Be ready to say:** "I made a deliberate choice here — end events at the same
-timestamp are processed before start events, so touching intervals don't count
-as overlapping."
+**Be ready to say:** "I made a deliberate choice here — end events at the same timestamp are processed before start events, so touching intervals don't count as overlapping."
 
 ---
 
 ## Likely interviewer follow-ups
 - "What's the time complexity?" → O(n log n) for the sort
-- "What if two events happen at the same time?" → end processes before start;
-  explain the tuple sort tie-breaking
-- "Why not just compare every pair of intervals?" → that's O(n²), sweep line
-  is O(n log n)
-- "What does 'sweep line' mean?" → you scan a conceptual vertical line from
-  left to right across a timeline, processing events as you hit them
+- "What if two events happen at the same time?" → end processes before start; explain the tuple sort tie-breaking
+- "Why not just compare every pair of intervals?" → that's O(n²), sweep line is O(n log n)
+- "What does 'sweep line' mean?" → you scan a conceptual vertical line from left to right across a timeline, processing events as you hit them

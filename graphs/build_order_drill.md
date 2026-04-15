@@ -1,9 +1,7 @@
 # build_order.py — Drill Notes
 
 ## Opening line (say this first)
-"This is topological sort using Kahn's algorithm. The idea is: track how many
-prerequisites each task is still waiting on, then process tasks in waves as
-those counts hit zero."
+"This is topological sort using Kahn's algorithm. The idea is: track how many prerequisites each task is still waiting on, then process tasks in waves as those counts hit zero."
 
 ---
 
@@ -42,15 +40,12 @@ current_task = ready_to_run_queue.pop(0)  # O(n) — shifts the whole list
 ```
 Fix: use `collections.deque` and call `.popleft()` instead (O(1)).
 
-**What to say:** "I'd swap the list for a `collections.deque` to get O(1) pops
-from the front."
+**What to say:** "I'd swap the list for a `collections.deque` to get O(1) pops from the front."
 
 ---
 
 ## Cycle detection — how it works
-If A waits for B and B waits for A, neither ever reaches in-degree 0. They
-never enter the queue, never get appended to the result. So the result ends up
-shorter than the full task list — that's the signal.
+If A waits for B and B waits for A, neither ever reaches in-degree 0. They never enter the queue, never get appended to the result. So the result ends up shorter than the full task list — that's the signal.
 
 ---
 
@@ -58,5 +53,4 @@ shorter than the full task list — that's the signal.
 - "What's the time complexity?" → O(V + E)
 - "What if there's a cycle?" → return empty list; explain the length check
 - "Why pop(0) instead of deque?" → acknowledge it, say you'd use deque
-- "What does topological sort guarantee?" → that every prerequisite appears
-  before the tasks that depend on it
+- "What does topological sort guarantee?" → that every prerequisite appears before the tasks that depend on it
